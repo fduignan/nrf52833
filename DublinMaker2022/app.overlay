@@ -1,0 +1,25 @@
+&spi3 {
+ compatible = "nordic,nrf-spim";
+ status = "okay";
+ sck-pin = <3>;
+ mosi-pin = <28>;
+ /* Redirecting MISO to a pin that is not connected on the microbit v2 board */
+ miso-pin = <27>;
+ clock-frequency = <32000000>;
+};
+&pwm0 {
+	status = "okay";
+	ch0-pin = <0>;
+};
+&uart0 {
+        status = "okay";
+        current-speed = <115200>;
+        tx-pin = <10>;
+        rx-pin = <9>;
+};
+
+&gpio1 {
+       status = "okay";
+       ngpios = <32>;
+
+};
