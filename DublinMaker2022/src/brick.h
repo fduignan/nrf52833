@@ -1,3 +1,5 @@
+#ifndef __BRICK_H
+#define __BRICK_H
 #include <stdint.h>
 #include "console.h"
 #include "sprite.h"
@@ -12,6 +14,4 @@ private:
     uint16_t fillcolour;    
 
 };
-
-
-
+#endif

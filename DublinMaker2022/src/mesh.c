@@ -4,7 +4,7 @@
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/mesh.h>
-
+#include "dmb_message_type.h"
 #define NODE_ADDR 0x0b0c
 
 
@@ -15,6 +15,8 @@
 
 #define OP_VENDOR_BUTTON BT_MESH_MODEL_OP_3(0x00, BT_COMP_ID_LF)
 #define OP_DMB_MESSAGE BT_MESH_MODEL_OP_3(0xD0, BT_COMP_ID_LF)
+#define OP_DMB_GAME_MESSAGE BT_MESH_MODEL_OP_3(0xD1,BT_COMP_ID_LF)
+#define OP_DMB_GAME_MESSAGE_RESPONSE BT_MESH_MODEL_OP_3(0xD2,BT_COMP_ID_LF)
 
 static const uint8_t net_key[16] = {
 	0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
@@ -33,9 +35,16 @@ static const uint16_t app_idx;
 static const uint32_t iv_index;
 static uint8_t flags;
 static uint16_t addr = NODE_ADDR;
+volatile uint32_t DMBMessageReceived = 0;
+volatile dmb_message DMBMailBox;
+volatile uint16_t DMBMessageSender;
+volatile uint32_t DMBGameMessageReceived = 0;
+volatile dmb_message DMBGameMailBox;
+volatile uint32_t DMBGameMessageResponseReceived = 0;
+volatile dmb_message DMBGameResponseMailBox;
+void mesh_clearReplay(void);
 
-static void heartbeat(const struct bt_mesh_hb_sub *sub, uint8_t hops,
-		      uint16_t feat)
+static void heartbeat(const struct bt_mesh_hb_sub *sub, uint8_t hops, uint16_t feat)
 {
 	printk("Heartbeat\n");
 }
@@ -71,35 +80,58 @@ static struct bt_mesh_model root_models[] = {
 	BT_MESH_MODEL_CFG_CLI(&cfg_cli),
 	BT_MESH_MODEL_HEALTH_SRV(&health_srv, &health_pub),
 };
-
-static int vnd_button_pressed(struct bt_mesh_model *model,
+static int dmb_game_message_received(struct bt_mesh_model *model,
 			       struct bt_mesh_msg_ctx *ctx,
 			       struct net_buf_simple *buf)
 {
-	printk("src 0x%04x\n", ctx->addr);
-
-	if (ctx->addr == bt_mesh_model_elem(model)->addr) {
-		return 0;
-	}
-
-	
-
+    printk("Game message received\n");
+    for (int i=0;i<MAX_MESSAGE_LEN;i++)
+    {    
+        uint8_t data = net_buf_simple_pull_u8(buf);
+        DMBGameMailBox.Message[i]=data;
+        printk(" %X ",data);
+    }
+    DMBGameMessageReceived = 1;
+	return 0;
+}
+static int dmb_game_message_response_received(struct bt_mesh_model *model,
+			       struct bt_mesh_msg_ctx *ctx,
+			       struct net_buf_simple *buf)
+{
+    printk("Game response received\n");
+    for (int i=0;i<MAX_MESSAGE_LEN;i++)
+    {    
+        uint8_t data = net_buf_simple_pull_u8(buf);
+        DMBGameResponseMailBox.Message[i]=data;
+        printk(" %X ",data);
+    }
+    DMBGameMessageResponseReceived = 1;
 	return 0;
 }
 static int dmb_message_received(struct bt_mesh_model *model,
 			       struct bt_mesh_msg_ctx *ctx,
 			       struct net_buf_simple *buf)
 {
-	uint8_t data = net_buf_simple_pull_u8(buf);
-	printk("Received DMB message %d\n",data);
+    printk("DMB Message : ");
+    for (int i=0;i<MAX_MESSAGE_LEN;i++)
+    {    
+        uint8_t data = net_buf_simple_pull_u8(buf);
+		DMBMailBox.Message[i]=data;
+        printk(" %X ",data);
+    }
+	printk("\n");
 	printk("RSSI=%d\n",ctx->recv_rssi);
-	
+	DMBMessageReceived=1;
+	DMBMessageSender=ctx->addr;
+	mesh_clearReplay();
+
 	return 0;
 }
 static const struct bt_mesh_model_op vnd_ops[] = {
-	{ OP_VENDOR_BUTTON, BT_MESH_LEN_EXACT(0), vnd_button_pressed },
-	{ OP_DMB_MESSAGE, BT_MESH_LEN_EXACT(1), dmb_message_received },
-	BT_MESH_MODEL_OP_END,
+	{ OP_DMB_MESSAGE, BT_MESH_LEN_EXACT(MAX_MESSAGE_LEN), dmb_message_received },
+	{ OP_DMB_GAME_MESSAGE, BT_MESH_LEN_EXACT(MAX_MESSAGE_LEN), dmb_game_message_received },
+    { OP_DMB_GAME_MESSAGE_RESPONSE, BT_MESH_LEN_EXACT(MAX_MESSAGE_LEN), dmb_game_message_response_received },
+	BT_MESH_MODEL_OP_END
 };
 
 static struct bt_mesh_model vnd_models[] = {
@@ -135,13 +167,13 @@ static void configure(void)
 	bt_mesh_cfg_mod_sub_add_vnd(net_idx, addr, addr, GROUP_ADDR,
 				    MOD_LF, BT_COMP_ID_LF, NULL);
 
-#if NODE_ADDR == PUBLISHER_ADDR
+//#if NODE_ADDR == PUBLISHER_ADDR
 	{
 		struct bt_mesh_cfg_hb_pub pub = {
 			.dst = GROUP_ADDR,
 			.count = 0xff,
-			.period = 0x05,
-			.ttl = 0x07,
+			.period = 0x7,
+			.ttl = 0x02,
 			.feat = 0,
 			.net_idx = net_idx,
 		};
@@ -149,10 +181,8 @@ static void configure(void)
 		bt_mesh_cfg_hb_pub_set(net_idx, addr, &pub, NULL);
 		printk("Publishing heartbeat messages\n");
 	}
-#endif
+//#endif
 	printk("Configuration complete\n");
-
-	board_play("100C100D100E100F100G100A100H");
 }
 
 static const uint8_t dev_uuid[16] = { 0xdd, 0xdd };
@@ -171,7 +201,7 @@ static void bt_ready(int err)
 		printk("Bluetooth init failed (err %d)\n", err);
 		return;
 	}
-
+	
 	printk("Bluetooth initialized\n");
 
 	err = bt_mesh_init(&prov, &comp);
@@ -179,7 +209,6 @@ static void bt_ready(int err)
 		printk("Initializing mesh failed (err %d)\n", err);
 		return;
 	}
-
 	printk("Mesh initialized\n");
 
 /*	if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
@@ -189,6 +218,7 @@ static void bt_ready(int err)
 */
 	err = bt_mesh_provision(net_key, net_idx, flags, iv_index, addr,
 				dev_key);
+
 	if (err == -EALREADY) {
 		printk("Using stored settings\n");
 	} else if (err) {
@@ -198,78 +228,46 @@ static void bt_ready(int err)
 		printk("Provisioning completed\n");
 		configure();
 	}
-
-#if NODE_ADDR != PUBLISHER_ADDR
+	
 	/* Heartbeat subcscription is a temporary state (due to there
 	 * not being an "indefinite" value for the period, so it never
 	 * gets stored persistently. Therefore, we always have to configure
 	 * it explicitly.
 	 */
-	{
-		struct bt_mesh_cfg_hb_sub sub = {
-			.src = PUBLISHER_ADDR,
-			.dst = GROUP_ADDR,
-			.period = 0x5,
-		};
+	struct bt_mesh_cfg_hb_sub sub = {
+		.src = PUBLISHER_ADDR,
+		.dst = GROUP_ADDR,
+		.period = 0x7,
+	};
 
-		bt_mesh_cfg_hb_sub_set(net_idx, addr, &sub, NULL);
-		printk("Subscribing to heartbeat messages\n");
-	}
-#endif
+	bt_mesh_cfg_hb_sub_set(net_idx, addr, &sub, NULL);
+	printk("Subscribing to heartbeat messages\n");
+//	bt_mesh_suspend(); // Suspend the network when not in use - saves about 10mA at 3.3V.  Stops the heartbeat service
+	
 }
 
 static uint16_t target = GROUP_ADDR;
 
-void board_button_1_pressed(void)
+void mesh_begin(uint16_t address)
 {
-	NET_BUF_SIMPLE_DEFINE(msg, 3 + 4);
-	struct bt_mesh_msg_ctx ctx = {
-		.app_idx = app_idx,
-		.addr = target,
-		.send_ttl = BT_MESH_TTL_DEFAULT,
-	};
-
-	/* Bind to Health model */
-	bt_mesh_model_msg_init(&msg, OP_VENDOR_BUTTON);
-
-	if (bt_mesh_model_send(&vnd_models[0], &ctx, &msg, NULL, NULL)) {
-		printk("Unable to send Vendor Button message\n");
-	}
-
-	printk("Button message sent with OpCode 0x%08x\n", OP_VENDOR_BUTTON);
-}
-
-uint16_t board_set_target(void)
-{
-	switch (target) {
-	case GROUP_ADDR:
-		target = 1U;
-		break;
-	case 9:
-		target = GROUP_ADDR;
-		break;
-	default:
-		target++;
-		break;
-	}
-
-	return target;
-}
-
-static K_SEM_DEFINE(tune_sem, 0, 1);
-static const char *tune_str;
-
-void board_play(const char *str)
-{
-	tune_str = str;
-	k_sem_give(&tune_sem);
-}
-
-void mesh_begin()
-{
-	addr = 0x0001;
+	addr = address;
 	target = 0x000f;
-	int ret = bt_enable(bt_ready);
+	bt_enable(bt_ready);
+}
+void mesh_clearReplay()
+{
+	int err;
+	bt_mesh_rpl_clear();
+	
+
+}
+void mesh_suspend()
+{
+	bt_mesh_suspend();
+}
+void mesh_resume()
+{
+	bt_mesh_resume();
 }
 void mesh_send_start(uint16_t duration, int err, void *cb_data)
 {
@@ -284,23 +282,75 @@ const struct bt_mesh_send_cb dmb_send_sb_s = {
         .end = mesh_send_end,
 };
 
-void sendDMBMessage(uint32_t data)
+void sendDMBMessage(uint16_t the_target, dmb_message * dmbmsg)
 {
         int err;
-        NET_BUF_SIMPLE_DEFINE(msg, 3 + 4 + 1);
+        NET_BUF_SIMPLE_DEFINE(msg, 3 + 4 + MAX_MESSAGE_LEN);
         struct bt_mesh_msg_ctx ctx = {
                 .app_idx = app_idx,
-                .addr = target,
+                .addr = the_target,
                 .send_ttl = BT_MESH_TTL_DEFAULT,
         };
 
         bt_mesh_model_msg_init(&msg, OP_DMB_MESSAGE);   
-        net_buf_simple_add_u8(&msg,data);
+        for (int i=0;i<MAX_MESSAGE_LEN;i++)
+        {
+            net_buf_simple_add_u8(&msg,dmbmsg->Message[i]);
+        }
         err = bt_mesh_model_send(&vnd_models[0], &ctx, &msg,&dmb_send_sb_s, NULL);
         if (err) {
                 printk("Unable to send DMB message %d\n",err);
         }
 
         printk("DMB message sent with OpCode 0x%08x\n", OP_DMB_MESSAGE);
+		mesh_clearReplay();
+
 }
-/********************/
+
+void sendDMBGameMessage(uint16_t the_target, dmb_message * dmbmsg)
+{
+        int err;
+        NET_BUF_SIMPLE_DEFINE(msg, 3 + 4 + MAX_MESSAGE_LEN);
+        struct bt_mesh_msg_ctx ctx = {
+                .app_idx = app_idx,
+                .addr = the_target,
+                .send_ttl = BT_MESH_TTL_DEFAULT,
+        };
+
+        bt_mesh_model_msg_init(&msg, OP_DMB_GAME_MESSAGE);   
+        for (int i=0;i<MAX_MESSAGE_LEN;i++)
+        {
+            net_buf_simple_add_u8(&msg,dmbmsg->Message[i]);
+        }
+        err = bt_mesh_model_send(&vnd_models[0], &ctx, &msg,&dmb_send_sb_s, NULL);
+        if (err) {
+                printk("Unable to send DMB game message %d\n",err); 
+        }
+
+        printk("DMB game message sent\n");
+}
+
+void sendDMBGameResponseMessage(uint16_t the_target, dmb_message * dmbmsg)
+{
+        int err;
+        NET_BUF_SIMPLE_DEFINE(msg, 3 + 4 + MAX_MESSAGE_LEN);
+        struct bt_mesh_msg_ctx ctx = {
+                .app_idx = app_idx,
+                .addr = the_target,
+                .send_ttl = BT_MESH_TTL_DEFAULT,
+        };
+
+        bt_mesh_model_msg_init(&msg, OP_DMB_GAME_MESSAGE_RESPONSE);   
+        printk("\nResponse data ");
+        for (int i=0;i<MAX_MESSAGE_LEN;i++)
+        {
+            printk(" %X ",dmbmsg->Message[i]);
+            net_buf_simple_add_u8(&msg,dmbmsg->Message[i]);
+        }
+        err = bt_mesh_model_send(&vnd_models[0], &ctx, &msg,&dmb_send_sb_s, NULL);
+        if (err) {
+                printk("Unable to send DMB game response message %d\n",err);
+        }
+
+        printk("DMB game response message sent\n");
+}

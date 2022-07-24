@@ -1,8 +1,6 @@
 #include <stdint.h>
-#include "../include/STM32F0x0.h"
 #include "console.h"
-#include "spi.h"
-#include "timer.h"
+
 #include "sprite.h"
 #include "brick.h"
 #include "brici.h"
@@ -12,7 +10,7 @@ void ClassicBrici()
     #define Brick_Width 30
     #define Brick_Height 10
     #define BRICK_COUNT ( (3*SCREEN_WIDTH) / Brick_Width )
-    Console.fillRectangle(0,0,SCREEN_WIDTH-1,SCREEN_HEIGHT-1,0);
+    Console.Display.fillRectangle(0,0,SCREEN_WIDTH-1,SCREEN_HEIGHT-1,0);
     brick Bricks[BRICK_COUNT];
     uint16_t RowCount=0;
     uint32_t Brick_Count = BRICK_COUNT;
@@ -27,7 +25,7 @@ void ClassicBrici()
         g=255;
         x=RowCount*Brick_Width;
         y=50;
-        Bricks[Index].define(x,y,Brick_Width,Brick_Height,COLOUR(r,g,b));
+        Bricks[Index].define(x,y,Brick_Width,Brick_Height,Console.Display.RGBToWord(r,g,b));
         RowCount++;
     }
     RowCount = 0;
@@ -38,7 +36,7 @@ void ClassicBrici()
         g=255;
         x=RowCount*Brick_Width;
         y=50+Brick_Height;
-        Bricks[Index].define(x,y,Brick_Width,Brick_Height,COLOUR(r,g,b));
+        Bricks[Index].define(x,y,Brick_Width,Brick_Height,Console.Display.RGBToWord(r,g,b));
         RowCount++;
     }
     RowCount = 0;
@@ -49,7 +47,7 @@ void ClassicBrici()
         g=64;
         x=RowCount*Brick_Width;
         y=50+2*Brick_Height;
-        Bricks[Index].define(x,y,Brick_Width,Brick_Height,COLOUR(r,g,b));
+        Bricks[Index].define(x,y,Brick_Width,Brick_Height,Console.Display.RGBToWord(r,g,b));
         RowCount++;
     }
     Brici(Bricks,Brick_Count,30,0);
@@ -58,8 +56,8 @@ void Brici(brick *Bricks, uint16_t Brick_Count, uint16_t BatWidth,uint16_t demo_
 {
     
     
-    brick Bat(0, SCREEN_HEIGHT-20, BatWidth, 3,COLOUR(255,255,255));    
-    brick Ball(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 3, 3,COLOUR(255,255,255));
+    brick Bat(0, SCREEN_HEIGHT-20, BatWidth, 3,Console.Display.RGBToWord(255,255,255));    
+    brick Ball(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 3, 3,Console.Display.RGBToWord(255,255,255));
 #define MAX_BRICI_LEVELS 4
     int Level = MAX_BRICI_LEVELS;
     int LevelComplete = 0;
@@ -75,7 +73,7 @@ void Brici(brick *Bricks, uint16_t Brick_Count, uint16_t BatWidth,uint16_t demo_
         {
             Bricks[Index].show();
             if (!demo_mode)
-                Console.drawRectangle(Bricks[Index].getX(),Bricks[Index].getY(),Bricks[Index].getWidth(),Bricks[Index].getHeight(),0);
+                Console.Display.drawRectangle(Bricks[Index].getX(),Bricks[Index].getY(),Bricks[Index].getWidth(),Bricks[Index].getHeight(),0);
         }
         Ball.move(Console.random(10, SCREEN_WIDTH-10), SCREEN_HEIGHT/2);
         if (Console.random(0,2) > 0)
@@ -85,11 +83,11 @@ void Brici(brick *Bricks, uint16_t Brick_Count, uint16_t BatWidth,uint16_t demo_
         LevelComplete = 0;
         BallYVelocity = -1;        
         for (Index = BallCount; Index > 0; Index--)
-            Console.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, RGBToWord(0xff, 0xf, 0xf));        
+            Console.Display.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, Console.Display.RGBToWord(0xff, 0xf, 0xf));        
         Ball.show();
         Bat.show();
-        Console.print("Level", 5, 5, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
-        Console.print(MAX_BRICI_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
+        Console.Display.print("Level", 5, 5, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
+        Console.Display.print(MAX_BRICI_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
         
         while (!LevelComplete)
         {            
@@ -156,11 +154,11 @@ void Brici(brick *Bricks, uint16_t Brick_Count, uint16_t BatWidth,uint16_t demo_
                 if (BallCount == 0) // Any left?
                 {
                     // Nope: hard luck, game over
-                    Console.fillRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
-                    Console.print("GAME OVER", 9, 80, 100, RGBToWord(0xff, 0xff, 0xff), 0);
-                    Console.print("Fire to restart", 15, 60, 120, RGBToWord(0xff, 0xff, 0), RGBToWord(0, 0, 0));
-                    while (!(Console.Controller.getButtonState() & Console.Controller.Fire))
-                        Console.Timer.sleep(10);
+                    Console.Display.fillRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+                    Console.Display.print("GAME OVER", 9, 80, 100, Console.Display.RGBToWord(0xff, 0xff, 0xff), 0);
+                    Console.Display.print("Press A to restart", 15, 60, 120, Console.Display.RGBToWord(0xff, 0xff, 0), Console.Display.RGBToWord(0, 0, 0));
+                    while (!(Console.Controller.getButtonState() & Console.Controller.A))
+                        k_msleep(10);
                     return;
                 }
                 // start a new ball moving in a random way
@@ -170,9 +168,9 @@ void Brici(brick *Bricks, uint16_t Brick_Count, uint16_t BatWidth,uint16_t demo_
                     BallXVelocity = -1;
                 BallYVelocity = -1;
                 Ball.move(Console.random(10, SCREEN_WIDTH - 10), Console.random(90, 120));
-                Console.fillRectangle(SCREEN_WIDTH-5*15, SCREEN_HEIGHT-10, 120, 10, 0);  // wipe out the remaining lives area
+                Console.Display.fillRectangle(SCREEN_WIDTH-5*15, SCREEN_HEIGHT-10, 120, 10, 0);  // wipe out the remaining lives area
                 for (Index = BallCount; Index > 0; Index--) //  draw remaining lives
-                    Console.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, RGBToWord(0xff, 0xf, 0xf));
+                    Console.Display.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, Console.Display.RGBToWord(0xff, 0xf, 0xf));
                 
             }
             LevelComplete = 1;
@@ -207,16 +205,16 @@ void Brici(brick *Bricks, uint16_t Brick_Count, uint16_t BatWidth,uint16_t demo_
             {
                 Level--;
                 Ball.hide();
-                Console.print("Level", 5, 5, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
-                Console.print(MAX_BRICI_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));                
+                Console.Display.print("Level", 5, 5, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
+                Console.Display.print(MAX_BRICI_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));                
             }
             if (!demo_mode)
             {
-                Console.Timer.sleep(Level+5); // Slow the game to human speed                
+                k_msleep(Level+5); // Slow the game to human speed                
             }
             else
             {
-                Console.Timer.sleep(5); // Slow the game to human speed                
+                k_msleep(5); // Slow the game to human speed                
             }
             Bat.redraw(); // redraw bat as it might have lost a pixel due to collisions          
         }

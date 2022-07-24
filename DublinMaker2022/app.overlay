@@ -1,15 +1,19 @@
 &spi3 {
  compatible = "nordic,nrf-spim";
  status = "okay";
- sck-pin = <3>;
- mosi-pin = <28>;
+ sck-pin = <41>; // P1.09
+ mosi-pin = <5>; // P0.05
  /* Redirecting MISO to a pin that is not connected on the microbit v2 board */
  miso-pin = <27>;
  clock-frequency = <32000000>;
 };
 &pwm0 {
 	status = "okay";
-	ch0-pin = <0>;
+	ch0-pin = <0>; 	
+};
+&pwm1 {
+	status = "okay";
+	ch0-pin = <24>; 	
 };
 &uart0 {
         status = "okay";
@@ -22,4 +26,10 @@
        status = "okay";
        ngpios = <32>;
 
+};
+&i2c1 {
+	compatible = "nordic,nrf-twim";
+    status = "okay";
+    sda-pin = <31>; // P0.31 SDA on SAO connector
+    scl-pin = <29>; // P0.29 SCL on SAO connector
 };

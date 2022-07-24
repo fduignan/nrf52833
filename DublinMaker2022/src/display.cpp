@@ -2,6 +2,7 @@
 #include <device.h>
 #include <drivers/gpio.h>
 #include <drivers/spi.h>
+#include <drivers/pwm.h>
 #include <stdio.h>
 #include "display.h"
 #include "font5x7.h"
@@ -18,9 +19,14 @@ static const struct device *gpio0, *gpio1;
 
 // Control line usage
 // The RESET_PORT_BIT is on GPIO0
-#define RESET_PORT_BIT 2
+#define RESET_PORT_BIT 18
 // The DC_PORT_BIT is on GPIO0
-#define DC_PORT_BIT 29
+#define DC_PORT_BIT 13
+
+// The BACKLIGHT control is on GPIO0
+#define BACKLIGHT_PORT_BIT 24
+static const struct device *blk_pwm;
+
 
 void ResetLow()
 {
@@ -38,7 +44,25 @@ void DCHigh()
 {
 	gpio_pin_set(gpio0,DC_PORT_BIT,1);
 }
-
+void BacklightHigh()
+{
+	uint32_t Period = (uint32_t)16000000/ (uint32_t)1000;
+	pwm_pin_set_cycles(blk_pwm, BACKLIGHT_PORT_BIT, Period,Period,0);
+}
+void BacklightLow()
+{
+	uint32_t Period = (uint32_t)16000000/ (uint32_t)1000;
+	pwm_pin_set_cycles(blk_pwm, BACKLIGHT_PORT_BIT, Period,0,0);
+}
+void display::setBrightness(uint32_t pcnt)
+{
+	volatile uint32_t *Prescaler = (volatile uint32_t *)(0x4001C000+0x50c);
+	*Prescaler = 6;
+	
+	uint32_t Period = (uint32_t)16000000/ (uint32_t)1000;
+	uint32_t HighTime = (Period * pcnt)/100;
+	pwm_pin_set_cycles(blk_pwm, BACKLIGHT_PORT_BIT, Period,HighTime,0);
+}
 void display::hw_test()
 {
 	// Test routine
@@ -47,6 +71,10 @@ void display::hw_test()
 		// Insert calls here to the various
 		// control lines to test them.
 		// Also send some SPI data
+		ResetLow();
+		k_msleep(100);		
+		ResetHigh();
+		k_msleep(100);
 	}
 }
 int display::begin()
@@ -84,7 +112,14 @@ int display::begin()
 	}
 	ret = gpio_pin_configure(gpio0,RESET_PORT_BIT,GPIO_OUTPUT);
 	ret = gpio_pin_configure(gpio0,DC_PORT_BIT,GPIO_OUTPUT);
-	
+	//ret = gpio_pin_configure(gpio0,BACKLIGHT_PORT_BIT,GPIO_OUTPUT);
+	blk_pwm = device_get_binding("PWM_1");
+	if (blk_pwm == NULL)
+	{
+		printk("Error acquiring PWM\r\n");
+		return -1;
+		
+	}
 //	hw_test();		
 	k_msleep(25);	
 	k_msleep(1);
@@ -94,15 +129,15 @@ int display::begin()
 	k_msleep(25);
 	ResetHigh();
 	k_msleep(25);
-	this->command(0x1);
+	this->command(0x1); // Software reset
 	k_msleep(150);
-	this->command(0x11);
-	k_msleep(25);
+	this->command(0x11); // exit sleep
+	k_msleep(250);
 	this->command(0x3a);// Set colour mode        
 	this->data(0x55); // 16bits / pixel @ 64k colors 5-6-5 format 
 	k_msleep(25);
 	this->command(0x36); // RGB Format
-	this->data(0x60); // // RGB Format, rows are on the long axis. Change to 0x40 to enable portrait mode
+	this->data(0x08); // // RGB Format, rows are on the long axis. Change to 0x40 to enable portrait mode,0x60 for landscape
 	k_msleep(25);
 	this->command(0x51); // maximum brightness
     k_msleep(25);
@@ -113,7 +148,8 @@ int display::begin()
 	this->command(0x2c);   // put display in to write mode
 	
 	this->fillRectangle(0,0,SCREEN_WIDTH, SCREEN_HEIGHT, 0x0000);  // black out the screen
-    
+   // BacklightHigh();
+	setBrightness(70);
 	return 0;
 }
 void display::command(uint8_t cmd)
@@ -383,6 +419,49 @@ void display::fillCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t Col
         }
     }
 }
+void display::printX2(const char *Text, uint16_t len, uint16_t x, uint16_t y, uint16_t ForeColour, uint16_t BackColour)
+{
+	#define Scale 2
+	// This function draws each character individually scaled up by a factor of 2.  It uses an array called TextBox as a temporary storage
+    // location to hold the dots for the character in question.  It constructs the image of the character and then
+    // calls on putImage to place it on the screen
+    uint8_t Index = 0;
+    uint8_t Row, Col;
+    const uint8_t *CharacterCode = 0;    
+	
+    uint16_t TextBox[FONT_WIDTH * FONT_HEIGHT*Scale * Scale];
+
+    for (Index = 0; Index < len; Index++)
+    {
+        CharacterCode = &Font5x7[FONT_WIDTH * (Text[Index] - 32)];
+        Col = 0;
+        while (Col < FONT_WIDTH)
+        {
+            Row = 0;
+            while (Row < FONT_HEIGHT)
+            {
+                if (CharacterCode[Col] & (1 << Row))
+                {
+                    TextBox[((Row*Scale) * FONT_WIDTH*Scale) + (Col*Scale)] = ForeColour;
+					TextBox[((Row*Scale) * FONT_WIDTH*Scale) + (Col*Scale)+1] = ForeColour;
+					TextBox[(((Row*Scale)+1) * FONT_WIDTH*Scale) + (Col*Scale)] = ForeColour;
+					TextBox[(((Row*Scale)+1) * FONT_WIDTH*Scale) + (Col*Scale)+1] = ForeColour;
+                }
+                else
+                {
+                    TextBox[((Row*Scale) * FONT_WIDTH*Scale) + (Col*Scale)] = BackColour;
+					TextBox[((Row*Scale) * FONT_WIDTH*Scale) + (Col*Scale)+1] = BackColour;
+					TextBox[(((Row*Scale)+1) * FONT_WIDTH*Scale) + (Col*Scale)] = BackColour;
+					TextBox[(((Row*Scale)+1) * FONT_WIDTH*Scale) + (Col*Scale)+1] = BackColour;
+                }
+                Row++;
+            }
+            Col++;
+        }
+        this->putImage(x, y, FONT_WIDTH*Scale, FONT_HEIGHT*Scale, (uint16_t *)TextBox);
+        x = x + FONT_WIDTH*Scale + 2;
+    }
+}
 void display::print(const char *Text, uint16_t len, uint16_t x, uint16_t y, uint16_t ForeColour, uint16_t BackColour)
 {
 	// This function draws each character individually.  It uses an array called TextBox as a temporary storage
@@ -433,7 +512,22 @@ void display::print(uint16_t Number, uint16_t x, uint16_t y, uint16_t ForeColour
     Buffer[0] = Number % 10 + '0';
     print(Buffer, 5, x, y, ForeColour, BackColour);
 }
-
+void display::printX2(uint16_t Number, uint16_t x, uint16_t y, uint16_t ForeColour, uint16_t BackColour)
+{
+     // This function converts the supplied number into a character string and then calls on puText to
+    // write it to the display
+    char Buffer[5]; // Maximum value = 65535
+    Buffer[4] = Number % 10 + '0';
+    Number = Number / 10;
+    Buffer[3] = Number % 10 + '0';
+    Number = Number / 10;
+    Buffer[2] = Number % 10 + '0';
+    Number = Number / 10;
+    Buffer[1] = Number % 10 + '0';
+    Number = Number / 10;
+    Buffer[0] = Number % 10 + '0';
+    printX2(Buffer, 5, x, y, ForeColour, BackColour);
+}
 uint16_t display::RGBToWord(uint16_t R, uint16_t G, uint16_t B)
 {
     uint16_t rvalue = 0;
@@ -442,4 +536,18 @@ uint16_t display::RGBToWord(uint16_t R, uint16_t G, uint16_t B)
     rvalue += (R >> 3) << 8;
     rvalue += (B >> 3) << 3;
     return rvalue;
+}
+void display::clear()
+{
+	this->fillRectangle(0,0,SCREEN_WIDTH, SCREEN_HEIGHT, 0x0000);  // black out the screen
+}
+uint32_t display::mystrlen(const char *s)
+{
+	uint32_t count=0;
+	while(*s)
+	{
+		s++;
+		count++;
+	}
+	return count;
 }

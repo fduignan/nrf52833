@@ -1,6 +1,6 @@
 // invaders.h
 #include "console.h"
-#define RGBToWord( R,  G,  B)  (  ((R&0xf8) << (11-3)) | ((G&0xfc) << (5-2)) | ((B&0xf8)>>3) )
+#define RGBTOWORD( R,  G,  B)  (  ((R&0xf8) << (11-3)) | ((G&0xfc) << (5-2)) | ((B&0xf8)>>3) )
 void playInvaders(uint16_t demo_mode);
 //  An invader is shown below
 /*     

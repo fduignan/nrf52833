@@ -6,12 +6,12 @@
 
 #include "controller.h" 
 // Button configuration
-#define UP_PORT_BIT 5
-#define DOWN_PORT_BIT 31
+#define UP_PORT_BIT 28
+#define DOWN_PORT_BIT 03
 #define LEFT_PORT_BIT 25 
-#define RIGHT_PORT_BIT 5
-#define FIRE_PORT_BIT 1
-#define ESCAPE_PORT_BIT 30
+#define RIGHT_PORT_BIT 5 
+#define A_PORT_BIT 1
+#define B_PORT_BIT 30
 static const struct device *gpio0,*gpio1;
 
 int controller::begin()
@@ -32,8 +32,8 @@ int controller::begin()
 	gpio_pin_configure(gpio0, DOWN_PORT_BIT, GPIO_INPUT | GPIO_PULL_UP);
 	gpio_pin_configure(gpio0, LEFT_PORT_BIT, GPIO_INPUT | GPIO_PULL_UP);
 	gpio_pin_configure(gpio1, RIGHT_PORT_BIT, GPIO_INPUT | GPIO_PULL_UP);
-	gpio_pin_configure(gpio0, FIRE_PORT_BIT, GPIO_INPUT | GPIO_PULL_UP);
-	gpio_pin_configure(gpio0, ESCAPE_PORT_BIT, GPIO_INPUT | GPIO_PULL_UP);
+	gpio_pin_configure(gpio0, A_PORT_BIT, GPIO_INPUT | GPIO_PULL_UP);
+	gpio_pin_configure(gpio0, B_PORT_BIT, GPIO_INPUT | GPIO_PULL_UP);
 	return 0;
 }
 
@@ -55,10 +55,10 @@ uint16_t controller::getButtonState()
 		ReturnValue |= Left;
 	if ((port_state1 & (1 << RIGHT_PORT_BIT))==0)
 			ReturnValue |= Right;
-	if ((port_state0 & (1 << FIRE_PORT_BIT))==0)
-			ReturnValue |= Fire;
-	if ((port_state0 & (1 << ESCAPE_PORT_BIT))==0)	
-			ReturnValue |= Escape;		
+	if ((port_state0 & (1 << A_PORT_BIT))==0)
+			ReturnValue |= A;
+	if ((port_state0 & (1 << B_PORT_BIT))==0)	
+			ReturnValue |= B;		
 	
     return ReturnValue;
 }

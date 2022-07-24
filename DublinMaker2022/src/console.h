@@ -4,7 +4,7 @@
 #include "display.h"
 #include "controller.h"
 #include "sound.h"
-#define COLOUR(R,G,B) RGBToWord(R,G,B)
+#define COLOUR(R,G,B) RGBTOWORD(R,G,B)
 
 class console
 {

@@ -1,3 +1,4 @@
+#include <random/rand32.h>
 #include "console.h"
 #include "font5x7.h"
 console Console;
@@ -30,7 +31,7 @@ uint32_t console::prbs()
 		shift_register=shift_register | (new_bit);
 		busy=0;
 	}
-	return shift_register & 0x7ffffff; // return 31 LSB's 
+	return shift_register & 0x7fffffff; // return 31 LSB's 
 }
 void console::random_seed()
 {
@@ -43,7 +44,11 @@ void console::random_seed()
     // perhaps a call to readAnalogue(chan_num) might be a good choice?  The channel number
     // can be defined in the controller class (as a static) and mapped appropriately within the
     // Controller object.  Will add up and scale a few reads to change more bits in the shift register
-    shift_register = 0x12345678;
+    shift_register = 0;
+    while(shift_register ==0)
+    {
+        shift_register = sys_rand32_get();
+    }
 	return;
     while(shift_register == 0)
     {

@@ -28,7 +28,7 @@ void brick::show()
 {
     //if (!Visible)
     {                
-        Console.fillRectangle(X,Y,w,h,fillcolour);           
+        Console.Display.fillRectangle(X,Y,w,h,fillcolour);           
     }
     Visible=1;
     
@@ -39,7 +39,7 @@ void brick::hide()
     if (Visible)
     {
         // assumes a black backgound (colour = 0)
-        Console.fillRectangle(X,Y,w,h,0);
+        Console.Display.fillRectangle(X,Y,w,h,0);
     }
     Visible = 0;
 }

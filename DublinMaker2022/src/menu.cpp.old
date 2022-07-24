@@ -1,0 +1,84 @@
+#include <stdint.h>
+#include "menu.h"
+#include "font5x7.h"
+void menu::show()
+{
+	Display->clear();
+	for (uint32_t i=0;i< this->count;i++)
+	{
+		
+		Display->printX2(this->choices[i],mystrlen(this->choices[i]),FONT_WIDTH*2,i*((FONT_HEIGHT*2)+1),Display->RGBToWord(0xff,0xff,0xff),0);
+	}
+}
+int menu::getChoice()
+{
+	int choice =-1;
+	int Done=0;
+	while(Done == 0)
+	{
+		int state=0;
+		while(state==0)
+		{	
+			k_msleep(50); // debounce and sleep a bit			
+			state=Controller->getButtonState();
+		}
+		switch (state)
+		{
+			
+			case Controller->Down: {
+				// remove highlight from previous selection
+				if (choice != -1)
+				{
+					Display->fillRectangle(0,(choice*FONT_HEIGHT*2)+1,FONT_WIDTH,FONT_HEIGHT*2,Display->RGBToWord(0,0,0));
+				}
+				choice = (choice + 1) % this->count;
+				// highlight current selection				
+				Display->fillRectangle(0,(choice*FONT_HEIGHT*2)+1,FONT_WIDTH,FONT_HEIGHT*2,Display->RGBToWord(0xff,0xff,0));								
+				break;
+			}
+			case Controller->Up: {
+				// remove highlight from previous selection
+				if (choice != -1)
+				{
+					Display->fillRectangle(0,(choice*FONT_HEIGHT*2)+1,FONT_WIDTH,FONT_HEIGHT*2,Display->RGBToWord(0,0,0));
+				}
+				choice = (choice - 1);
+				if (choice < 0)
+				{
+					choice = this->count - 1;
+				}
+				// highlight current selection				
+				Display->fillRectangle(0,(choice*FONT_HEIGHT*2)+1,FONT_WIDTH,FONT_HEIGHT*2,Display->RGBToWord(0xff,0xff,0));												
+				break;
+			}
+			case Controller->A: {
+				// OK
+				Done = 1;
+				break;
+			}
+			case Controller->B: {
+				// Cancel
+				Done = -1;
+				break;
+			}
+		}
+		while(Controller->getButtonState()) // wait for key release
+		{
+			k_msleep(50);
+		}
+	}
+	if (Done == 1)
+		return choice;
+	else
+		return -1;
+}
+uint32_t menu::mystrlen(const char *s)
+{
+	uint32_t count=0;
+	while(*s)
+	{
+		s++;
+		count++;
+	}
+	return count;
+}

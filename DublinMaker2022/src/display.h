@@ -21,10 +21,16 @@ public:
 	void drawCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t Colour);
 	void fillCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t Colour);
 	void print(const char *Text, uint16_t len, uint16_t x, uint16_t y, uint16_t ForeColour, uint16_t BackColour);
+	void printX2(const char *Text, uint16_t len, uint16_t x, uint16_t y, uint16_t ForeColour, uint16_t BackColour);
 	void print(uint16_t number, uint16_t x, uint16_t y, uint16_t ForeColour, uint16_t BackColour);
+    void printX2(uint16_t number, uint16_t x, uint16_t y, uint16_t ForeColour, uint16_t BackColour);
 	uint16_t RGBToWord(uint16_t R, uint16_t G, uint16_t B);
 	void drawLineLowSlope(uint16_t x0, uint16_t y0, uint16_t x1,uint16_t y1, uint16_t Colour);
 	void drawLineHighSlope(uint16_t x0, uint16_t y0, uint16_t x1,uint16_t y1, uint16_t Colour);    
 	void hw_test(void);
+	void setBrightness(uint32_t pcnt);
+	void clear();
+    uint32_t mystrlen(const char *s);
+
 };
 #endif

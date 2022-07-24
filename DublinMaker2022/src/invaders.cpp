@@ -66,10 +66,10 @@ void playInvaders(uint16_t demo_mode)
   int Toggle = 1;
 
   Console.Display.fillRectangle(0, 0, SCREEN_WIDTH, SCREEN_WIDTH, 0);
-  Console.Display.print("MCU Galaga", 10, 10, 40, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
-  Console.Display.print("Only 5 missiles", 15, 10, 60, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
-  Console.Display.print("can be in flight", 16, 10, 80, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
-  Console.Display.print("at one time", 11, 10, 100, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
+  Console.Display.print("MCU Galaga", 10, 10, 40, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
+  Console.Display.print("Only 5 missiles", 15, 10, 60, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
+  Console.Display.print("can be in flight", 16, 10, 80, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
+  Console.Display.print("at one time", 11, 10, 100, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
   Console.sleep(1000);  
   while (Level > 0)
   {
@@ -95,10 +95,10 @@ void playInvaders(uint16_t demo_mode)
       AttackerMissiles[Index].hide();    
     for (Index = 0; Index < MAX_DEFENDER_MISSILES;Index++)
       DefenderMissiles[Index].hide();          
-    Console.Display.print("Level", 5, 5, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
-    Console.Display.print(MAX_INVADER_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));    
+    Console.Display.print("Level", 5, 5, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
+    Console.Display.print(MAX_INVADER_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));    
     for (Index = DefenderCount; Index > 0; Index--) //  draw remaining lives
-        Console.Display.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, RGBToWord(0xff, 0xf, 0xf));
+        Console.Display.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, Console.Display.RGBToWord(0xff, 0xf, 0xf));
     GameOver = 0;
     DefenderMissileCounter = 0;
     InvaderCounter = 0;
@@ -142,7 +142,7 @@ void playInvaders(uint16_t demo_mode)
           {
             // Found an empty slot, place a missile just above the centre of the defender
             DefenderMissiles[DefenderMissileCounter].show();
-            DefenderMissiles[DefenderMissileCounter].move(Defender.getX() + Defender.getWidth() / 2 - DefenderMissiles[DefenderMissileCounter].getWidth() / 2, Defender.getY() - DefenderMissiles[DefenderMissileCounter].getHeight() / 2);
+            DefenderMissiles[DefenderMissileCounter].move(Defender.getX() + Defender.getWidth() / 2 - DefenderMissiles[DefenderMissileCounter].getWidth() / 2, Defender.getY() - DefenderMissiles[DefenderMissileCounter].getHeight());
             break; // exit remaining 'for' loop cycles
           }
         }
@@ -192,8 +192,8 @@ void playInvaders(uint16_t demo_mode)
             if (DefenderCount == 0) 
             {   // All defenders are dead :(
                 Console.Display.fillRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
-                Console.Display.print("GAME OVER", 9, 80, 100, RGBToWord(0xff, 0xff, 0xff), 0);
-                Console.Display.print("Fire to restart", 15, 60, 120, RGBToWord(0xff, 0xff, 0), RGBToWord(0, 0, 0));
+                Console.Display.print("GAME OVER", 9, 80, 100, Console.Display.RGBToWord(0xff, 0xff, 0xff), 0);
+                Console.Display.print("Fire to restart", 15, 60, 120, Console.Display.RGBToWord(0xff, 0xff, 0), Console.Display.RGBToWord(0, 0, 0));
                 if (!demo_mode)
                 {
                     while (!FirePressed())
@@ -205,7 +205,7 @@ void playInvaders(uint16_t demo_mode)
             Defender.show();
             Console.Display.fillRectangle(SCREEN_WIDTH-5*15, SCREEN_HEIGHT-10, 120, 10, 0);  // wipe out the remaining lives area
             for (Index = DefenderCount; Index > 0; Index--) //  draw remaining lives
-                Console.Display.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, RGBToWord(0xff, 0xf, 0xf));
+                Console.Display.fillRectangle(SCREEN_WIDTH - Index * 15, SCREEN_HEIGHT-10, 10, 10, Console.Display.RGBToWord(0xff, 0xf, 0xf));
           }
 
         }
@@ -237,7 +237,8 @@ void playInvaders(uint16_t demo_mode)
               {
                 ActiveAttackerMissiles++;
                 AttackerMissiles[AttackerMissileCounter].show();
-                AttackerMissiles[AttackerMissileCounter].move(Invaders[InvaderCounter].getX() + Invaders[InvaderCounter].getWidth() / 2 - DefenderMissiles[DefenderMissileCounter].getWidth() / 2, Invaders[InvaderCounter].getY() + DefenderMissiles[DefenderMissileCounter].getHeight() / 2);
+              //  AttackerMissiles[AttackerMissileCounter].move(Invaders[InvaderCounter].getX() + Invaders[InvaderCounter].getWidth() / 2 - DefenderMissiles[DefenderMissileCounter].getWidth() / 2, Invaders[InvaderCounter].getY() + DefenderMissiles[DefenderMissileCounter].getHeight() / 2);
+				AttackerMissiles[AttackerMissileCounter].move(Invaders[InvaderCounter].getX() + Invaders[InvaderCounter].getWidth() / 2 - DefenderMissiles[0].getWidth() / 2, Invaders[InvaderCounter].getY() + DefenderMissiles[0].getHeight() / 2);
                 MissileFired = 1;
               }
               AttackerMissileCounter++;
@@ -264,22 +265,21 @@ void playInvaders(uint16_t demo_mode)
       if (XDirectionChange) // Did an invader hit either edge?
         x_step = -x_step; // if so, then reverse direction
       if (YDirectionChange) // Did an invader hit either edge?
-        y_step = -y_step; // if so, then reverse direction
-        
+        y_step = -y_step; // if so, then reverse direction              
       Console.sleep(15);  // slow the game to make it playable
       
     } // End of while (!LevelComplete )
     if ((LevelComplete == 1) && (Level > 0))
     {
       Level--;
-      Console.Display.print("Level", 5, 5, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
-      Console.Display.print(MAX_INVADER_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, RGBToWord(0xff, 0xff, 0xff), RGBToWord(0, 0, 0));
+      Console.Display.print("Level", 5, 5, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
+      Console.Display.print(MAX_INVADER_LEVELS - Level + 1, 60, SCREEN_HEIGHT-10, Console.Display.RGBToWord(0xff, 0xff, 0xff), Console.Display.RGBToWord(0, 0, 0));
 
     }
   } // end of while (Level > 0)
-  Console.Display.fillRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, RGBToWord(0, 0, 0xff));
-  Console.Display.print("VICTORY!", 8, 40, 100, RGBToWord(0xff, 0xff, 0), RGBToWord(0, 0, 0xff));
-  Console.Display.print("Fire to restart", 15, 8, 120, RGBToWord(0xff, 0xff, 0), RGBToWord(0, 0, 0xff));  
+  Console.Display.fillRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Console.Display.RGBToWord(0, 0, 0xff));
+  Console.Display.print("VICTORY!", 8, 40, 100, Console.Display.RGBToWord(0xff, 0xff, 0), Console.Display.RGBToWord(0, 0, 0xff));
+  Console.Display.print("Fire to restart", 15, 8, 120, Console.Display.RGBToWord(0xff, 0xff, 0), Console.Display.RGBToWord(0, 0, 0xff));  
   while (!FirePressed())
       Console.sleep(10);
   while (FirePressed());
@@ -302,7 +302,7 @@ int FirePressed()
     // return 1 if the user pressed 'Fire'
 // Some debouncing of the button is performed    
     static int PreviousState = 0;
-    if (Console.Controller.getButtonState() & Console.Controller.Fire)
+    if (Console.Controller.getButtonState() & Console.Controller.A)
     {
         if (PreviousState == 0)
         {
